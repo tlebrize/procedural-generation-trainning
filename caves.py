@@ -4,8 +4,7 @@ class Cell(object):
 	def __init__(self, x, y, wall, batch, scale):
 		self.y = y
 		self.x = x
-		self.neighbors = { "W": None, "E": None, "S": None, "N": None,
-			"NW": None, "NE": None, "SW": None, "SE": None}
+		self.neighbors = []
 		self.wall = random.randint(0, 100) < 45
 		self.sprite = None
 		if self.wall:
@@ -18,7 +17,7 @@ class Cell(object):
 			"Wall" if self.wall else "Empty", "Sprite" if self.sprite else "None")
 
 
-class Main(tkengine.TkScene):
+class Cave(tkengine.TkScene):
 
 	def __init__(self, world, size_x, size_y, scale):
 		self.world = world
@@ -37,6 +36,10 @@ class Main(tkengine.TkScene):
 		current_image = pyglet.image.load("assets/selected.png")
 		self.cursor = pyglet.sprite.Sprite(current_image, 0, 0)
 		self.cursor.scale = self.scale
+		self.range_x = list(range(0, self.size_x))
+		random.shuffle(self.range_x)
+		self.range_y = list(range(0, self.size_y))
+		random.shuffle(self.range_y)
 		self.key_handlers = {
 			pyglet.window.key.ESCAPE	: pyglet.app.exit,
 			pyglet.window.key.RETURN	: self._whole,
@@ -72,22 +75,24 @@ class Main(tkengine.TkScene):
 	def _init_neighbors(self):
 		for x in range(self.size_x):
 			for y in range(self.size_y):
+				neighbors = []
 				if x > 0:
-					self.field[x][y].neighbors["W"] = self.field[x - 1][y]
+					neighbors.append(self.field[x - 1][y])
 				if x < self.size_x -1:
-					self.field[x][y].neighbors["E"] = self.field[x + 1][y]
+					neighbors.append(self.field[x + 1][y])
 				if y > 0:
-					self.field[x][y].neighbors["S"] = self.field[x][y - 1]
+					neighbors.append(self.field[x][y - 1])
 				if y < self.size_y -1:
-					self.field[x][y].neighbors["N"] = self.field[x][y + 1]
+					neighbors.append(self.field[x][y + 1])
 				if x > 0 and y < self.size_y -1:
-					self.field[x][y].neighbors["NW"] = self.field[x - 1][y + 1]
+					neighbors.append(self.field[x - 1][y + 1])
 				if x < self.size_y - 1 and y < self.size_y -1:
-					self.field[x][y].neighbors["NE"] = self.field[x + 1][y + 1]
+					neighbors.append(self.field[x + 1][y + 1])
 				if x > 0 and y > 0:
-					self.field[x][y].neighbors["SW"] = self.field[x - 1][y - 1]
+					neighbors.append(self.field[x - 1][y - 1])
 				if x < self.size_x - 1 and y > 0:
-					self.field[x][y].neighbors["SE"] = self.field[x + 1][y - 1]
+					neighbors.append(self.field[x + 1][y - 1])
+				self.field[x][y].neighbors = neighbors
 
 	def _make_wall(self, x, y):
 		self.field[x][y].wall = True
@@ -101,8 +106,8 @@ class Main(tkengine.TkScene):
 		self.field[x][y].sprite = None
 
 	def _check(self, x, y):
-		neighbors = list(self.field[x][y].neighbors.values())
-		wall_count = len(list(filter(lambda x: x == None or x.wall == True, neighbors)))
+		wall_count = len(list(filter(lambda x: x.wall == True, self.field[x][y].neighbors)))
+		wall_count += 8 - len(self.field[x][y].neighbors)
 		wall_count += 1 if self.field[x][y].wall else 0
 		if self.field[x][y].wall:
 			if wall_count < 5:
@@ -119,8 +124,8 @@ class Main(tkengine.TkScene):
 
 	def _step(self):
 		change = False
-		for x in range(0, self.size_x):
-			for y in range(0, self.size_y):
+		for x in self.range_x:
+			for y in self.range_y:
 				if self._check(x, y):
 					change = True
 		return change
@@ -131,12 +136,12 @@ class Main(tkengine.TkScene):
 
 
 if __name__ == "__main__":
-	size_x = 120
+	size_x = 80
 	size_y = 80
 	scale = 0.5
 	window = tkengine.TkWindow(int(32 * size_x * scale), int(32 * size_y * scale))
 	world = tkengine.TkWorld(window)
-	main = Main(world, size_x, size_y, scale)
+	main = Cave(world, size_x, size_y, scale)
 	world.add_scenes({"main": main})
 	world.run("main")
 
